@@ -29,22 +29,7 @@
    <img width="1360" alt="Capture d’écran 2024-10-29 à 18 47 24" src="https://github.com/user-attachments/assets/f900836f-fb54-4786-b83b-2af24e73e378">
 
 
-## Step 2: Retrieve Your OpenAI API
-
-1. Go to [**OpenAI Platform**](https://platform.openai.com/settings/organization/billing/overview).
-2. Fund your OpenAI account with at least $5 by clicking on "Add to credit balance".
-    
-    <img width="1360" alt="Capture%20d%E2%80%99e%CC%81cran%202024-10-28%20a%CC%80%2012 49 06" src="https://github.com/user-attachments/assets/a1a25684-e85f-4901-84d4-31cee29a2d30">
-
-
-3. Go to [**your profile**](https://platform.openai.com/settings/profile).
-4. Click on **"User API keys"** and then on **"Create new secret key"**.
-5. Name your key and copy the obtained API key.
-    
-    <img width="1360" alt="Capture%20d%E2%80%99e%CC%81cran%202024-10-28%20a%CC%80%2012 51 57" src="https://github.com/user-attachments/assets/c6fe4c67-ea56-4b86-8801-51ec37b4fdfd">
-
-
-## Step 3: Retrieve Your Microsoft Azure API Key
+## Step 2: Retrieve Your Microsoft Azure API Key
 
 ### **1. Create an Azure Subscription**
 
@@ -77,7 +62,7 @@
     - On your resource page, in the left menu, click on **“Keys and Endpoint”**.
     - Note down **Key1** (or Key2) and the **Endpoint**.
 
-## Step 4: Install Python and the Required Libraries for the Script
+## Step 3: Install Python and the Required Libraries for the Script
 
 1. Install Python [**here**](https://www.python.org/downloads/).
 2. Open your computer's terminal and enter the following commands:
