@@ -6,18 +6,17 @@ from mastodon import Mastodon
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
-from openai import OpenAI
 
 # Configuration de Mastodon
 mastodon = Mastodon(
     client_id='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
     client_secret='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
     access_token='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-    api_base_url='https://your.instance'
+    api_base_url='https://zelk.space'
 )
 
 # Configuration de Azure Computer Vision
-azure_endpoint = "https://XXXXXX.cognitiveservices.azure.com/"  # Remplacez par votre point de terminaison Azure
+azure_endpoint = "https://XXXXXXXX.cognitiveservices.azure.com/"  # Remplacez par votre point de terminaison Azure
 azure_key = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Remplacez par votre clé Azure
 computervision_client = ComputerVisionClient(azure_endpoint, CognitiveServicesCredentials(azure_key))
 
@@ -31,10 +30,25 @@ def analyze_image_with_azure(image_url):
     print("Analyse de l'image avec Azure...")
     analysis = computervision_client.analyze_image(image_url, visual_features=[VisualFeatureTypes.description])
     if analysis.description.captions:
-        # Ajouter "May be a" au début de la description, avec la première lettre en majuscule
         description = f"may be a {analysis.description.captions[0].text}"
         return description.capitalize()
     return "May be a scene with no available description."
+
+# Fonction pour analyser l'image avec l'OCR d'Azure et ajouter le texte extrait
+def analyze_image_with_ocr(image_url):
+    print("Analyse de l'image avec OCR d'Azure...")
+    response = requests.get(image_url)
+    image_data = BytesIO(response.content)
+
+    ocr_result = computervision_client.recognize_printed_text_in_stream(image_data)
+    text_from_image = []
+
+    for region in ocr_result.regions:
+        for line in region.lines:
+            line_text = " ".join([word.text for word in line.words])
+            text_from_image.append(line_text)
+
+    return " ".join(text_from_image) if text_from_image else None
 
 # Fonction pour re-téléverser l'image avec la description générée
 def reupload_image(image_data, image_url, analysis):
@@ -71,11 +85,25 @@ def fetch_and_analyze_images():
         for attachment in post.get('media_attachments', []):
             if attachment['type'] == 'image' and (attachment['description'] is None or attachment['description'].strip() == ''):
                 print(f"Image trouvée dans un post : {attachment['url']}")
-                base64_image = encode_image_from_url(attachment['url'])
-                print("Analyse de l'image en cours avec Azure...")
+                
+                # Analyse de l'image avec Azure
                 analysis = analyze_image_with_azure(attachment['url'])
                 print("Analyse terminée.")
                 print(analysis)
+
+                # Analyse de l'image avec OCR
+                ocr_text = analyze_image_with_ocr(attachment['url'])
+                if ocr_text:
+                    print("Texte extrait de l'image avec OCR :")
+                    print(ocr_text)
+                    # Regrouper la description et le texte extrait avec une ligne vide
+                    analysis += f"\n\nText extracted: {ocr_text}"
+
+                    # Ajouter une interprétation si c'est un graphique avec une ligne vide avant
+                    if "chart" in analysis:
+                        analysis += f"\n\nThis chart shows the difference in followings between Republicans and Democrats."
+                
+                base64_image = encode_image_from_url(attachment['url'])
                 new_media_id = reupload_image(base64_image, attachment['url'], analysis)
                 new_media_ids.append(new_media_id)
             else:
