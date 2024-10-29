@@ -7,36 +7,36 @@ from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
 
-# Configuration de Mastodon
+# Mastodon configuration
 mastodon = Mastodon(
     client_id='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
     client_secret='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
     access_token='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-    api_base_url='https://zelk.space'
+    api_base_url='https://your.instance'
 )
 
-# Configuration de Azure Computer Vision
-azure_endpoint = "https://XXXXXXXX.cognitiveservices.azure.com/"  # Remplacez par votre point de terminaison Azure
-azure_key = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Remplacez par votre clé Azure
+# Azure Computer Vision configuration
+azure_endpoint = "https://XXXXXXXX.cognitiveservices.azure.com/"  # Replace with your Azure endpoint
+azure_key = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Replace with your Azure key
 computervision_client = ComputerVisionClient(azure_endpoint, CognitiveServicesCredentials(azure_key))
 
-# Fonction pour encoder une image à partir d'une URL en base64
+# Function to encode an image from a URL to base64
 def encode_image_from_url(image_url):
     response = requests.get(image_url)
     return base64.b64encode(response.content).decode("utf-8")
 
-# Fonction pour analyser l'image avec Azure et formater le texte alternatif
+# Function to analyze the image with Azure and format the alt text
 def analyze_image_with_azure(image_url):
-    print("Analyse de l'image avec Azure...")
+    print("Analyzing the image with Azure...")
     analysis = computervision_client.analyze_image(image_url, visual_features=[VisualFeatureTypes.description])
     if analysis.description.captions:
         description = f"may be a {analysis.description.captions[0].text}"
         return description.capitalize()
     return "May be a scene with no available description."
 
-# Fonction pour analyser l'image avec l'OCR d'Azure et ajouter le texte extrait
+# Function to analyze the image with Azure's OCR and add the extracted text
 def analyze_image_with_ocr(image_url):
-    print("Analyse de l'image avec OCR d'Azure...")
+    print("Analyzing the image with Azure OCR...")
     response = requests.get(image_url)
     image_data = BytesIO(response.content)
 
@@ -50,7 +50,7 @@ def analyze_image_with_ocr(image_url):
 
     return " ".join(text_from_image) if text_from_image else None
 
-# Fonction pour re-téléverser l'image avec la description générée
+# Function to re-upload the image with the generated description
 def reupload_image(image_data, image_url, analysis):
     mime_type = guess_type(image_url)[0] or 'application/octet-stream'
     new_media = mastodon.media_post(BytesIO(base64.b64decode(image_data)), mime_type=mime_type, description=analysis)
@@ -58,7 +58,7 @@ def reupload_image(image_data, image_url, analysis):
 
 from bs4 import BeautifulSoup
 
-# Fonction pour mettre à jour le post avec les nouvelles images et descriptions
+# Function to update the post with the new images and descriptions
 def update_post_with_new_images(post_id, new_media_ids):
     original_post = mastodon.status(post_id)
     original_text = BeautifulSoup(original_post['content'], 'html.parser').get_text()
@@ -72,34 +72,34 @@ def update_post_with_new_images(post_id, new_media_ids):
     response = requests.put(put_url, headers=headers, data=data)
     return response
 
-# Fonction principale pour récupérer, analyser et mettre à jour les posts
+# Main function to fetch, analyze, and update the posts
 def fetch_and_analyze_images():
     user_account = mastodon.account_verify_credentials()
     user_id = user_account['id']
 
-    print("Récupération des posts...")
+    print("Fetching posts...")
     posts = mastodon.account_statuses(user_id, limit=20)
 
     for post in posts:
         new_media_ids = []
         for attachment in post.get('media_attachments', []):
             if attachment['type'] == 'image' and (attachment['description'] is None or attachment['description'].strip() == ''):
-                print(f"Image trouvée dans un post : {attachment['url']}")
+                print(f"Image found in a post: {attachment['url']}")
                 
-                # Analyse de l'image avec Azure
+                # Analyze the image with Azure
                 analysis = analyze_image_with_azure(attachment['url'])
-                print("Analyse terminée.")
+                print("Analysis completed.")
                 print(analysis)
 
-                # Analyse de l'image avec OCR
+                # Analyze the image with OCR
                 ocr_text = analyze_image_with_ocr(attachment['url'])
                 if ocr_text:
-                    print("Texte extrait de l'image avec OCR :")
+                    print("Text extracted from the image with OCR:")
                     print(ocr_text)
-                    # Regrouper la description et le texte extrait avec une ligne vide
+                    # Combine the description and extracted text with a blank line
                     analysis += f"\n\nText extracted: {ocr_text}"
 
-                    # Ajouter une interprétation si c'est un graphique avec une ligne vide avant
+                    # Add an interpretation if it's a chart with a blank line before
                     if "chart" in analysis:
                         analysis += f"\n\nThis chart shows the difference in followings between Republicans and Democrats."
                 
@@ -107,15 +107,15 @@ def fetch_and_analyze_images():
                 new_media_id = reupload_image(base64_image, attachment['url'], analysis)
                 new_media_ids.append(new_media_id)
             else:
-                print("L'image a déjà un texte alternatif ou n'est pas une image.")
+                print("The image already has an alt text or is not an image.")
 
         if new_media_ids:
-            print(f"Mise à jour du post ID : {post['id']} avec les nouvelles images.")
+            print(f"Updating post ID: {post['id']} with the new images.")
             response = update_post_with_new_images(post['id'], new_media_ids)
             if response.status_code == 200:
-                print("Post mis à jour avec succès.")
+                print("Post updated successfully.")
             else:
-                print(f"Échec de la mise à jour du post. Réponse : {response.status_code}, {response.text}")
+                print(f"Failed to update the post. Response: {response.status_code}, {response.text}")
 
 if __name__ == "__main__":
     fetch_and_analyze_images()
