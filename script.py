@@ -16,10 +16,6 @@ mastodon = Mastodon(
     api_base_url='https://your.instance'
 )
 
-# Configuration d'OpenAI
-openai_api_key = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-OpenAI.api_key = openai_api_key
-
 # Configuration de Azure Computer Vision
 azure_endpoint = "https://XXXXXX.cognitiveservices.azure.com/"  # Remplacez par votre point de terminaison Azure
 azure_key = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Remplacez par votre clé Azure
