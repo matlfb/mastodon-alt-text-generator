@@ -96,3 +96,22 @@
     pip3 install beautifulsoup4
     ```
     
+## Step 5: Edit the Script.py File
+
+1. Open a text editor.
+2. Download the python script above, opening and replacing the “XXXXXXXXXX” with the new keys generated.
+3. Once done, run the script
+
+**Don’t forget to change “api_base_url” to your account's instance
+
+## And there you have it! Your script should be up and running 🥳
+
+*It is also possible to run the script on a server and complete these steps in a terminal.*
+
+*Note that the script can be executed periodically on Linux with the following command:*
+
+```bash
+crontab -e
+```
+
+If you enjoyed this tutorial, you can follow me on Mastodon at: [**@matlfb@mastodon.design**](https://mastodon.design/@matlfb)
