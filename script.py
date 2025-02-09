@@ -129,7 +129,7 @@ def fetch_and_analyze_images():
 
 if __name__ == "__main__":
     try:
-        while True:
+        while True:  # Adding the infinite loop
             fetch_and_analyze_images()
             time.sleep(60)  # Wait 60 seconds before next execution
     except requests.exceptions.TooManyRedirects as e:
