@@ -115,4 +115,4 @@
 
 Your Mastodon alt-text generator is now fully configured with **GPT-4o** and `.env` support.
 
-Follow me on Mastodon: [**@matlfb@mastodon.design**](https://social.lol/@matlfb)
+Follow me on Mastodon: [**@matlfb@social.lol**](https://social.lol/@matlfb)
