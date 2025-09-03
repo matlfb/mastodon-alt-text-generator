@@ -1,140 +1,123 @@
+import os
 import base64
 import requests
 from io import BytesIO
 from mimetypes import guess_type
 from mastodon import Mastodon
-from azure.cognitiveservices.vision.computervision import ComputerVisionClient
-from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
-from msrest.authentication import CognitiveServicesCredentials
 from bs4 import BeautifulSoup
 import time
-import re
+from openai import OpenAI
+from dotenv import load_dotenv
 
-# Mastodon Configuration
+# --- Load environment variables from .env ---
+load_dotenv()
+access_token = os.getenv("MASTODON_ACCESS_TOKEN")
+openai_key = os.getenv("OPENAI_API_KEY")
+
+# --- Simple check ---
+if not access_token or not openai_key:
+    raise ValueError("Environment variables MASTODON_ACCESS_TOKEN and OPENAI_API_KEY must be set")
+
+# --- Mastodon configuration ---
+# Replace 'mastodon.instance' with your Mastodon instance URL, e.g., 'https://mastodon.social'
 mastodon = Mastodon(
-    client_id='YOUR_CLIENT_ID',
-    client_secret='YOUR_CLIENT_SECRET',
-    access_token='YOUR_ACCESS_TOKEN',
-    api_base_url='YOUR_MASTODON_INSTANCE'  # e.g., 'https://mastodon.social'
+    access_token=access_token,
+    api_base_url='mastodon.instance'
 )
 
-# Azure Computer Vision Configuration
-azure_endpoint = "YOUR_AZURE_ENDPOINT"
-azure_key = "YOUR_AZURE_KEY"
-computervision_client = ComputerVisionClient(azure_endpoint, CognitiveServicesCredentials(azure_key))
+# --- OpenAI configuration ---
+client = OpenAI(api_key=openai_key)
+MODEL = "gpt-4o-mini"
+DETAIL_LEVEL = "low"  # "low" = cheaper, "high" = more detailed
 
+# --- Functions ---
 def encode_image_from_url(image_url):
+    """Download an image from a URL and encode it as base64"""
     response = requests.get(image_url)
+    response.raise_for_status()
     return base64.b64encode(response.content).decode("utf-8")
 
-def analyze_image_with_azure(image_url):
-    print("Analyzing image with Azure...")
-    analysis = computervision_client.analyze_image(image_url, visual_features=[VisualFeatureTypes.description])
-    if analysis.description.captions:
-        description = f"may be a {analysis.description.captions[0].text}"
-        return description.capitalize()
-    return "May be a scene with no available description."
+def analyze_image_with_gpt(image_url):
+    """Analyze an image using GPT-4o-mini and return an alt-text description"""
+    print(f"Analyzing image {image_url} with GPT-4o-mini...")
+    image_data = encode_image_from_url(image_url)
 
-def analyze_image_with_ocr(image_url):
-    print("Analyzing image with Azure OCR...")
-    response = requests.get(image_url)
-    image_data = BytesIO(response.content)
+    response = client.responses.create(
+        model=MODEL,
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": "Describe this image in clear and concise alt-text."},
+                    {"type": "input_image", "image_url": f"data:image/jpeg;base64,{image_data}", "detail": DETAIL_LEVEL}
+                ]
+            }
+        ]
+    )
 
-    ocr_result = computervision_client.recognize_printed_text_in_stream(image_data)
-    text_from_image = []
+    description = response.output[0].content[0].text.strip()
+    usage = response.usage
+    cost_input = usage.input_tokens * 0.15 / 1_000_000
+    cost_output = usage.output_tokens * 0.60 / 1_000_000
+    total_cost = cost_input + cost_output
 
-    for region in ocr_result.regions:
-        for line in region.lines:
-            line_text = " ".join([word.text for word in line.words])
-            text_from_image.append(line_text)
-
-    return " ".join(text_from_image) if text_from_image else None
+    print(f"Generated description: {description}")
+    print(f"Estimated cost: ~${total_cost:.6f} (input: {usage.input_tokens} tok, output: {usage.output_tokens} tok)")
+    return description
 
 def reupload_image(image_data, image_url, analysis):
+    """Re-upload an image to Mastodon with the generated alt-text"""
     mime_type = guess_type(image_url)[0] or 'application/octet-stream'
     new_media = mastodon.media_post(BytesIO(base64.b64decode(image_data)), mime_type=mime_type, description=analysis)
     return new_media['id']
 
-def get_post_with_text(post_id):
-    post = mastodon.status(post_id)
-    post_text = post['content']
-    media_attachments = post.get('media_attachments', [])
-    return post_text, media_attachments
-
-def clean_html_preserve_newlines(html_content):
-    # Replace <br> and </p><p> with newlines
-    html_content = re.sub(r'<br\s*/?>', '\n', html_content)
-    html_content = re.sub(r'</p>\s*<p>', '\n\n', html_content)
-    
-    # Use BeautifulSoup to remove all other HTML tags
-    soup = BeautifulSoup(html_content, 'html.parser')
-    text = soup.get_text()
-    
-    # Preserve multiple newlines
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    
-    return text.strip()
-
-def update_post_with_media(post_id, media_ids):
-    post_text, media_attachments = get_post_with_text(post_id)
-    
-    # Clean HTML while preserving newlines
-    post_text_cleaned = clean_html_preserve_newlines(post_text)
-
-    headers = {'Authorization': f'Bearer {mastodon.access_token}'}
-    data = {
-        'status': post_text_cleaned,
-        'media_ids[]': media_ids
-    }
+def update_post_with_new_images(post_id, new_media_ids):
+    """Update an existing post with new media that has alt-text"""
+    original_post = mastodon.status(post_id)
+    original_text = BeautifulSoup(original_post['content'], 'html.parser').get_text()
+    headers = {'Authorization': f'Bearer {access_token}'}
+    data = {'status': original_text, 'media_ids[]': new_media_ids}
     put_url = f'{mastodon.api_base_url}/api/v1/statuses/{post_id}'
     response = requests.put(put_url, headers=headers, data=data)
     return response
 
 def fetch_and_analyze_images():
+    """Fetch recent posts, analyze images without alt-text, and update the posts"""
     user_account = mastodon.account_verify_credentials()
     user_id = user_account['id']
-
-    print("Retrieving posts...")
+    print("Fetching posts...")
     posts = mastodon.account_statuses(user_id, limit=20)
 
     for post in posts:
         new_media_ids = []
         for attachment in post.get('media_attachments', []):
-            if attachment['type'] == 'image' and (attachment['description'] is None or attachment['description'].strip() == ''):
-                print(f"Found image in post: {attachment['url']}")
-                
-                analysis = analyze_image_with_azure(attachment['url'])
-                print("Analysis completed.")
-                print(analysis)
-
-                ocr_text = analyze_image_with_ocr(attachment['url'])
-                if ocr_text:
-                    print("Text extracted from image with OCR:")
-                    print(ocr_text)
-                    analysis += f"\n\nText extracted: {ocr_text}"
-
-                base64_image = encode_image_from_url(attachment['url'])
-                new_media_id = reupload_image(base64_image, attachment['url'], analysis)
-                new_media_ids.append(new_media_id)
+            if attachment['type'] == 'image' and (not attachment['description'] or not attachment['description'].strip()):
+                print(f"Image found in post: {attachment['url']}")
+                try:
+                    analysis = analyze_image_with_gpt(attachment['url'])
+                    base64_image = encode_image_from_url(attachment['url'])
+                    new_media_id = reupload_image(base64_image, attachment['url'], analysis)
+                    new_media_ids.append(new_media_id)
+                except Exception as e:
+                    print(f"Error analyzing or re-uploading image: {e}")
             else:
-                print("Image already has alt text or is not an image.")
+                print("Image already has alt-text or is not an image.")
 
         if new_media_ids:
-            print(f"Updating post ID: {post['id']} with new images.")
-            response = update_post_with_media(post['id'], new_media_ids)
+            print(f"Updating post ID: {post['id']} with new media.")
+            response = update_post_with_new_images(post['id'], new_media_ids)
             if response.status_code == 200:
-                print("Post updated successfully.")
+                print("Post successfully updated.")
             else:
                 print(f"Failed to update post. Response: {response.status_code}, {response.text}")
 
+# --- Main loop ---
 if __name__ == "__main__":
     try:
-        while True:  # Adding the infinite loop
+        while True:
             fetch_and_analyze_images()
-            time.sleep(60)  # Wait 60 seconds before next execution
-    except requests.exceptions.TooManyRedirects as e:
-        print(f"Redirection error: {e}")
-    except requests.exceptions.RequestException as e:
-        print(f"A request error occurred: {e}")
+            time.sleep(60)  # wait 60 seconds before the next execution
+    except KeyboardInterrupt:
+        print("\nScript stopped by user.")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"Critical error: {e}")
