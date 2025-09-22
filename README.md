@@ -46,6 +46,7 @@
     ```env
     MASTODON_ACCESS_TOKEN=xxxxxxxxxxxxxxxxxxxx
     OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxx
+    MASTODON_BASE_URL=https://xxxxxxxxxxxxxxxx
     ```
 
 3. Save the file. The script will use these variables to connect to Mastodon and OpenAI.
@@ -97,16 +98,47 @@
 
 ---
 
-## Optional: Run Periodically on Linux
+## Optional: Run Periodically with systemd on Linux
 
-1. Open crontab:  
+### Create a systemd service file
+
+1. Create a service file in the systemd directory:
     ```bash
-    crontab -e
+    sudo nano /etc/systemd/system/mastodon-alt-text.service
     ```
 
-2. Add a line to run every 5 minutes, for example:  
+2. Add the following content to the service file:
+    ```ini
+    [Unit]
+    Description=Mastodon Alt Text Generator
+    After=network.target
+
+    [Service]
+    User=mastodon
+    WorkingDirectory=/home/mastodon/live/scripts/alt_text_gen
+    Environment="PATH=/home/mastodon/live/scripts/alt_text_gen/venv/bin"
+    ExecStart=/home/mastodon/live/scripts/alt_text_gen/venv/bin/python script.py
+    Restart=always
+    RestartSec=10
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+
+3. Enable and start the service
     ```bash
-    */5 * * * * cd /path/to/project && python3 script.py
+    sudo systemctl daemon-reload
+    sudo systemctl enable mastodon-alt-text.service
+    sudo systemctl start mastodon-alt-text.service
+    ```
+
+	•	enable makes the service start automatically at boot.
+	•	start runs the service immediately.
+
+
+4. Check the service status:
+    ```bash
+    sudo systemctl status mastodon-alt-text.service
     ```
 
 ---
