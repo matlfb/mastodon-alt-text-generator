@@ -40,8 +40,20 @@
 
 ## Step 3: Create a `.env` File
 
-1. In your project folder, create a file named `.env` (with a dot at the beginning).  
-2. Add your keys like this:
+1. **Create the project directory** in your live folder:
+    ```bash
+    mkdir -p ~/live/scripts/alt_text_gen
+    ```
+    
+2. Then, go to the folder you created
+   ```bash
+    cd ~/live/scripts/alt_text_gen
+    ```
+   
+3. In your project folder, create a file named `.env` (with a dot at the beginning).
+	
+ 
+4. Add your keys like this:
 
     ```env
     MASTODON_ACCESS_TOKEN=xxxxxxxxxxxxxxxxxxxx
@@ -49,7 +61,7 @@
     MASTODON_BASE_URL=https://xxxxxxxxxxxxxxxx
     ```
 
-3. Save the file. The script will use these variables to connect to Mastodon and OpenAI.
+5. Save the file. The script will use these variables to connect to Mastodon and OpenAI.
 
 > ⚠️ Never share this `.env` file publicly — it contains your secret keys.
 
