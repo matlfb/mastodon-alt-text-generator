@@ -27,6 +27,15 @@
 
 ---
 
+## Step 2.a: Credit Your OpenAI Account
+
+Before generating alt text with GPT-4o, you need to ensure your OpenAI account has active credits — otherwise, you’ll get an “insufficient_quota” error.
+
+1.	Go to OpenAI Billing Overview.
+2.	If you see a message like “You don’t have an active subscription or prepaid credits”, click Buy credits.
+3.	Purchase at least $5 of prepaid credit (no subscription needed).
+4.	Once payment is complete, verify that a new line appears under Credit Grants with a status like: Active | $5.00 / $5.00 | Expires: Nov 2026
+
 ## Step 2: Retrieve Your OpenAI API Key
 
 1. Go to [**OpenAI API Keys**](https://platform.openai.com/account/api-keys).
