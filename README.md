@@ -27,7 +27,7 @@
 
 ---
 
-## Step 2.a: Credit Your OpenAI Account
+## Step 2: Credit Your OpenAI Account
 
 Before generating alt text with GPT-4o, you need to ensure your OpenAI account has active credits — otherwise, you’ll get an “insufficient_quota” error.
 
@@ -36,7 +36,7 @@ Before generating alt text with GPT-4o, you need to ensure your OpenAI account h
 3.	Purchase at least $5 of prepaid credit (no subscription needed).
 4.	Once payment is complete, verify that a new line appears under Credit Grants with a status like: Active | $5.00 / $5.00 | Expires: Nov 2026
 
-## Step 2: Retrieve Your OpenAI API Key
+## Step 3: Retrieve Your OpenAI API Key
 
 1. Go to [**OpenAI API Keys**](https://platform.openai.com/account/api-keys).
 2. Log in or create an account.
@@ -47,7 +47,7 @@ Before generating alt text with GPT-4o, you need to ensure your OpenAI account h
 
 ---
 
-## Step 3: Create a `.env` File
+## Step 4: Create a `.env` File
 
 1. **Create the project directory** in your live folder:
     ```bash
@@ -76,7 +76,7 @@ Before generating alt text with GPT-4o, you need to ensure your OpenAI account h
 
 ---
 
-## Step 4: Install Python and Required Libraries via Terminal
+## Step 5: Install Python and Required Libraries via Terminal
 
 1. Open your terminal.
 
@@ -99,7 +99,7 @@ Before generating alt text with GPT-4o, you need to ensure your OpenAI account h
 
 ---
 
-## Step 5: Edit the Script
+## Step 6: Edit the Script
 
 1. Download the latest script (the one using GPT-4o and `.env`).
 2. Replace `api_base_url='https://mastodon.instance'` with your Mastodon instance URL if different.
@@ -107,7 +107,7 @@ Before generating alt text with GPT-4o, you need to ensure your OpenAI account h
 
 ---
 
-## Step 6: Run the Script
+## Step 7: Run the Script
 
 1. Open your terminal, navigate to the project folder, then run:
 
